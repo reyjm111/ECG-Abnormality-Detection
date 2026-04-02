@@ -25,6 +25,6 @@ def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=
 
     events_arr = np.vstack((new_ann_samples, zero_arr, ann_classes_int)).T # making an (N, 3) events array
 
-    epochs = mne.Epochs(raw, events_arr, tmin=-0.5, tmax=0.5) # creating epochs at each R peak
+    epochs = mne.Epochs(raw, events_arr, event_id=class_dict, tmin=-0.5, tmax=0.5, preload=True, verbose=verbosity) # creating epochs at each R peak
 
     return epochs
