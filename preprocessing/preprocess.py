@@ -19,11 +19,33 @@ def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=
     ann_samples = np.asarray(ecg_ann_file.sample) # grab annotation sample indices from .atr file
     ann_classes = np.asarray(ecg_ann_file.symbol) # grab annotation labels from .atr file
 
-    class_dict = {'+': 0, 'A': 1, 'N': 2, 'V': 3, 'Q': 4, '|': 5, '~': 6} # encode selected annotation classes into integers
-    keep_mask = np.isin(ann_classes, list(class_dict.keys())) # keep only labels that exist in the class dictionary
+    exclude_labels = {"+", '"', "~", "[", "]", "|", "!", "x", "/", "f"}
+    keep_mask = ~np.isin(ann_classes, list(exclude_labels)) # keep only labels that exist in the class dictionary
+
 
     ann_classes = ann_classes[keep_mask] # filter annotation labels down to the selected classes
     ann_samples = ann_samples[keep_mask] # filter annotation sample indices to match the kept labels
+
+    class_dict = { # encode classes into 0 for non-abnormal beats and abnormal beats
+        "N": 0,
+        "L": 1,
+        "R": 1,
+        "A": 1,
+        "a": 1,
+        "J": 1,
+        "S": 1,
+        "V": 1,
+        "E": 1,
+        "F": 1,
+        "e": 1,
+        "j": 1,
+        "Q": 1,
+    }
+
+    keep_mask2 = np.isin(ann_classes, list(class_dict.keys())) # safety check for only relevant classes
+
+    ann_classes = ann_classes[keep_mask2] # filter annotation labels down to the selected classes
+    ann_samples = ann_samples[keep_mask2] # filter annotation sample indices to match the kept labels
 
     new_ann_samples = np.round((ann_samples / og_fs) * raw.info['sfreq']).astype(int) # convert original annotation samples to sample indices at the new sampling rate
     ann_classes_int = np.array([class_dict[x] for x in ann_classes], dtype=int) # convert kept annotation labels into integer class codes
@@ -31,9 +53,8 @@ def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=
 
     events_arr = np.column_stack((new_ann_samples, zero_arr, ann_classes_int)) # build an (N, 3) MNE events array: [sample, 0, class_id]
 
-    present_codes = np.unique(ann_classes_int) # identify which class codes are actually present in this record
-    event_id = {k: v for k, v in class_dict.items() if v in present_codes} # only pass event IDs that are actually present in the current events array
-
+    event_id = {'Normal': 0, 'Abnormal': 1}
+    
     epochs = mne.Epochs(
         raw,
         events_arr,
@@ -42,9 +63,14 @@ def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=
         tmax=0.5,
         preload=True,
         verbose=verbosity,
-        baseline=None
+        baseline=None, 
+        on_missing='ignore'
     ) # create 1-second epochs centered around each retained annotation event
 
-    epochs.info['subject_info'] = {'his_id': name_without_ext}
+    selection = epochs.selection
 
-    return epochs
+    epochs = epochs.get_data()
+    labels = ann_classes_int[selection]
+    groups = np.array([name_without_ext] * len(labels))
+
+    return epochs, labels, groups
