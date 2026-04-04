@@ -1,8 +1,11 @@
 import mne
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
 def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=(1, 40), notch=60, verbosity=False):
+
+    name_without_ext = Path(ecg_file).stem  # Returns 'file' [13]
 
     raw = mne.io.read_raw_edf(ecg_file, preload=True, verbose=verbosity) # import file into mne
     og_fs = raw.info['sfreq']
@@ -15,7 +18,6 @@ def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=
 
     ann_samples = np.asarray(ecg_ann_file.sample) # grab annotation sample indices from .atr file
     ann_classes = np.asarray(ecg_ann_file.symbol) # grab annotation labels from .atr file
-    print(np.unique(ann_classes))
 
     class_dict = {'+': 0, 'A': 1, 'N': 2, 'V': 3, 'Q': 4, '|': 5, '~': 6} # encode selected annotation classes into integers
     keep_mask = np.isin(ann_classes, list(class_dict.keys())) # keep only labels that exist in the class dictionary
@@ -42,5 +44,7 @@ def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=
         verbose=verbosity,
         baseline=None
     ) # create 1-second epochs centered around each retained annotation event
+
+    epochs.info['subject_info'] = {'his_id': name_without_ext}
 
     return epochs
