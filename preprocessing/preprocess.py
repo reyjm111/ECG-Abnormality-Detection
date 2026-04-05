@@ -19,7 +19,7 @@ def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=
     signal = raw.get_data()
     min_sig = signal.min()
     max_sig = signal.max()
-    signal_scaled = signal - min_sig / (max_sig - min_sig)
+    signal_scaled = (signal - min_sig) / (max_sig - min_sig)
     raw_scaled = mne.io.RawArray(signal_scaled, info=raw.info.copy())
 
     ann_samples = np.asarray(ecg_ann_file.sample) # grab annotation sample indices from .atr file
