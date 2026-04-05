@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=(1, 40), notch=60, verbosity=False):
+def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=(0.1, 40), notch=60, verbosity=False):
 
     name_without_ext = Path(ecg_file).stem  # Returns 'file' [13]
 
@@ -15,6 +15,12 @@ def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=
     raw.filter(bandpass_filter[0], bandpass_filter[1], verbose=verbosity, picks='ecg') # 1-40 Hz bandpass to preserve useful ECG signal
     raw.notch_filter(notch, verbose=verbosity, picks='ecg') # remove electrical interference
     raw.resample(resampling_freq, verbose=verbosity) # resample to 100 Hz, especially useful if combining datasets of different sampling rates
+
+    signal = raw.get_data()
+    min_sig = signal.min()
+    max_sig = signal.max()
+    signal_scaled = signal - min_sig / (max_sig - min_sig)
+    raw_scaled = mne.io.RawArray(signal_scaled, info=raw.info.copy())
 
     ann_samples = np.asarray(ecg_ann_file.sample) # grab annotation sample indices from .atr file
     ann_classes = np.asarray(ecg_ann_file.symbol) # grab annotation labels from .atr file
@@ -56,7 +62,7 @@ def preprocess_ecg(ecg_file, ecg_ann_file, resampling_freq=100, bandpass_filter=
     event_id = {'Normal': 0, 'Abnormal': 1}
     
     epochs = mne.Epochs(
-        raw,
+        raw_scaled,
         events_arr,
         event_id=event_id,
         tmin=-0.5,
