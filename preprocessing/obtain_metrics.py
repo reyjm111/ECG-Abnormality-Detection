@@ -14,11 +14,12 @@ def obtain_metrics(fold_results, history_results):
     Outputs:
         Printed fold summary results and plotting training and validation loss and other metrics.
     """
-    
+
     metric_names = ["train_loss", "val_loss", "accuracy", "precision", "recall", "f1", "auc"]
     summary_results = {}
     metric_keys = [k for k in fold_results[0].keys() if k not in ["fold", "best_epoch", "cm"]]
 
+    # Obtain mean and stdev out of each metric across folds
     for key in metric_keys:
         values = [fold[key] for fold in fold_results if not np.isnan(fold[key])]
         summary_results[key] = {
@@ -32,6 +33,7 @@ def obtain_metrics(fold_results, history_results):
     n_epochs = len(history_results[0]["history"])
     epochs = np.arange(1, n_epochs + 1)
 
+    # Loop through each metric and obtain the average across folds per epoch
     for metric in metric_names:
         metric_matrix = []
 
