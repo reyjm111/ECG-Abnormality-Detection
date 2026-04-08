@@ -3,33 +3,33 @@ from preprocess import preprocess_ecg
 import numpy as np
 import os
 import sys
+from collect_files import collect
 
-def file_aggregation(base_dir):
+def file_aggregation(base_dir): # getting all the files
 
     parent_dir = os.path.abspath("..")
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
 
-    from collect_files import collect
+    ecg_files, record_paths = collect(base_dir) 
 
-    files, record_paths = collect(base_dir)
+    X_epochs = []
+    y_epochs = []
+    all_groups_epochs = []
 
-    X = []
-    y = []
-    all_groups = []
+    # Go through each ecg file and annotation file to obtain epoch, label, and group data
+    for ecg_file, record_path in zip(ecg_files, record_paths): 
 
-    for file, record_path in zip(files, record_paths):
+        ann_file = wfdb.rdann(record_path, 'atr')
 
-        ann = wfdb.rdann(record_path, 'atr')
+        epochs, labels, groups = preprocess_ecg(ecg_file, ann_file) # preprocess ecg and annotation files
 
-        epochs, labels, groups = preprocess_ecg(file, ann)
+        X_epochs.append(epochs)
+        y_epochs.append(labels)
+        all_groups_epochs.append(groups)
 
-        X.append(epochs)
-        y.append(labels)
-        all_groups.append(groups)
-
-    X = np.concatenate(X)
-    y = np.concatenate(y)
-    groups = np.concatenate(all_groups)
+    X = np.concatenate(X_epochs) # concatenate all epochs
+    y = np.concatenate(y_epochs) # concatenate all labels
+    groups = np.concatenate(all_groups_epochs) # concatenate all groups
 
     return X, y, groups
