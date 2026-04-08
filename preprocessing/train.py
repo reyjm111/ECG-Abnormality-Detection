@@ -10,7 +10,7 @@ from torch.utils.data import TensorDataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 
-def train(X, y, groups, n_folds=5, n_epochs=25, lr=0.0003):
+def train(X, y, groups, n_folds=5, n_epochs=25, lr=0.00003):
 
 
     """
@@ -76,9 +76,7 @@ def train(X, y, groups, n_folds=5, n_epochs=25, lr=0.0003):
         # 1D CNN
         model = ECGCNN1D()
 
-        # Penalize false negatives more
-        pos_weight = torch.tensor([n_neg / max(n_pos, 1)], dtype=torch.float32)
-        criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+        criterion = nn.BCEWithLogitsLoss()
 
         # Optimize model weights
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
