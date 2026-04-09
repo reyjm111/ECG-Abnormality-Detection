@@ -15,7 +15,7 @@ def obtain_metrics(fold_results, history_results):
         Printed fold summary results and plotting training and validation loss and other metrics.
     """
 
-    metric_names = ["train_loss", "val_loss", "accuracy", "precision", "recall", "f1", "auc"]
+    metric_names = ["train_loss", "val_loss", "accuracy", "precision", "recall", "F1", "AUC"]
     summary_results = {}
     metric_keys = [k for k in fold_results[0].keys() if k not in ["fold", "best_epoch", "cm"]]
 
@@ -51,3 +51,32 @@ def obtain_metrics(fold_results, history_results):
         plt.ylabel(metric)
         plt.tight_layout()
         plt.show()
+
+    cms = np.array([fold["cm"] for fold in fold_results], dtype=float)
+
+    # Sum confusion matrix across folds
+    cm_sum = np.sum(cms, axis=0)
+
+    # Mean confusion matrix across folds
+    cm_mean = np.mean(cms, axis=0)
+
+    def plot_confusion_matrix(cm, title="Confusion Matrix", fmt=".0f"):
+        plt.figure(figsize=(5, 4))
+        plt.imshow(cm, interpolation="nearest")
+        plt.title(title)
+        plt.xlabel("Predicted Label")
+        plt.ylabel("True Label")
+        plt.xticks([0, 1], ["Normal", "Abnormal"])
+        plt.yticks([0, 1], ["Normal", "Abnormal"])
+
+        for i in range(cm.shape[0]):
+            for j in range(cm.shape[1]):
+                plt.text(j, i, format(cm[i, j], fmt),
+                         ha="center", va="center")
+
+        plt.colorbar()
+        plt.tight_layout()
+        plt.show()
+
+    plot_confusion_matrix(cm_sum, title="Summed Confusion Matrix Across Folds", fmt=".0f")
+    plot_confusion_matrix(cm_mean, title="Mean Confusion Matrix Across Folds", fmt=".2f")

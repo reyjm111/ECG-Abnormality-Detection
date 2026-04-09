@@ -10,7 +10,7 @@ from torch.utils.data import TensorDataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 
-def train(X, y, groups, n_folds=5, n_epochs=25, lr=0.00003):
+def train(X, y, groups, n_folds=10, n_epochs=50, lr=0.00003):
 
 
     """
@@ -141,7 +141,7 @@ def train(X, y, groups, n_folds=5, n_epochs=25, lr=0.00003):
             rec = recall_score(y_true, y_pred, zero_division=0)
             f1 = f1_score(y_true, y_pred, zero_division=0)
             auc = roc_auc_score(y_true, y_prob)
-            cm = confusion_matrix(y_true, y_pred)
+            cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
 
             epoch_result = {
                 'epoch': epoch+1,
