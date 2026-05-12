@@ -10,6 +10,9 @@ from torch.utils.data import TensorDataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 
+from pathlib import Path
+import copy
+
 def train(X, y, groups, n_folds=10, n_epochs=50, lr=0.00003):
 
 
@@ -42,6 +45,13 @@ def train(X, y, groups, n_folds=10, n_epochs=50, lr=0.00003):
 
     fold_results = []
     history_results = []
+
+    save_dir = Path("saved_models")
+    save_dir.mkdir(exist_ok=True)
+
+    overall_best_auc = -np.inf
+    overall_best_model_state = None
+    overall_best_metadata = None
 
     # Loop through each cross validation fold
     for fold, (train_idx, test_idx) in enumerate(split, start=1):
@@ -84,6 +94,7 @@ def train(X, y, groups, n_folds=10, n_epochs=50, lr=0.00003):
         fold_history = []
         best_fold_result = None
         best_auc = -np.inf
+        best_model_state = None
 
         # Train for the number of epochs specified 
         for epoch in range(n_epochs):
@@ -182,11 +193,29 @@ def train(X, y, groups, n_folds=10, n_epochs=50, lr=0.00003):
                     "auc": auc,
                     "cm": cm,
                 } 
+                best_model_state = copy.deepcopy(model.state_dict())
+
+        if best_fold_result["auc"] > overall_best_auc:
+
+            overall_best_auc = best_fold_result["auc"]
+            overall_best_model_state = copy.deepcopy(best_model_state)
+            overall_best_metadata = best_fold_result.copy()
 
         fold_results.append(best_fold_result)
         history_results.append({
             "fold": fold,
             "history": fold_history
         })
+    
+    overall_model_path = save_dir / "ecg_cnn_v1_best_overall.pt"
+    overall_best_metadata["model_path"] = str(overall_model_path)
 
-    return fold_results, history_results
+    torch.save(
+        {
+            "model_state_dict": overall_best_model_state,
+            "metadata": overall_best_metadata,
+        },
+        overall_model_path,
+    )
+
+    return fold_results, history_results, overall_best_metadata
